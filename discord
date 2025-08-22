@@ -1,0 +1,90 @@
+import config
+import discord
+from discord.ext import commands
+
+class Esya:
+    def __init__(self, ad, marka, kullanim_amaci):
+        self.ad = ad
+        self.marka = marka
+        self.kullanim_amaci = kullanim_amaci
+    
+    def bilgiler(self):
+        return f"**{self.ad}**\nMarka: {self.marka}\nAmaç: {self.kullanim_amaci}"
+    
+    def __str__(self):
+        return f"{self.ad} ({self.marka})"
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f'We have logged in as {bot.user}')
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    
+    if message.content.startswith('https://'):
+        await message.delete()
+        return
+
+@bot.event
+async def on_member_join(member):
+    # Karşılama mesajı gönderme
+    for channel in member.guild.text_channels:
+        await channel.send(f'Hoş geldiniz: {member.mention}!')
+
+@bot.command()
+async def hello(ctx):
+    await ctx.send('Hello!')
+
+@bot.command()
+async def giris(ctx):
+    await ctx.send('bot artık çalışıyor!')
+
+@bot.command()
+async def topla(ctx, a: int = None, b: int = None):
+    if a is None or b is None:
+        await ctx.send('Lütfen iki sayı giriniz: !topla <sayı1> <sayı2>')
+        return
+    await ctx.send(a + b)
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member = None):
+    if member:
+        if ctx.author.top_role <= member.top_role:
+            await ctx.send("Eşit veya daha yüksek rütbeli bir kullanıcıyı banlamak mümkün değildir!")
+        else:
+            await ctx.guild.ban(member)
+            await ctx.send(f"Kullanızı {member.name} banlandı")
+    else:
+        await ctx.send("Bu komut banlamak istediğiniz kullanıcıyı işaret etmelidir. Örneğin: `!ban @user`")
+
+@bot.command()
+@ban.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("Bu komutu çalıştırmak için yeterli izniniz yok.")
+    elif isinstance(error, commands.MemberNotFound):
+        await ctx.send("Kullanıcı bulunamadı!")
+
+@bot.command()
+async def help_command(ctx):
+    help_text = """
+**📋 Mevcut Komutlar:**
+
+`!hello` - Selamlaşma
+`!giris` - Bot çalıştığını söyler
+`!topla <sayı1> <sayı2>` - İki sayıyı toplar
+`!esya <ad> <marka> <kullanım amacı>` - Yeni eşya oluşturur
+`!help` - Bu yardım mesajını gösterir
+`!ban_members` - Bir kullanıcıyı sunucudan yasaklar
+"""
+    await ctx.send(help_text)
+
+bot.run(config.token)
